@@ -1,0 +1,30 @@
+int chuancanarr(int arr[], int size){
+	int i;
+	for(i=0;i<size;i = i+1){
+		arr[i] = arr[i] * 3;
+	}
+	return 1;
+}
+
+int main(){
+	printf("70216008\n");
+	
+	int i;
+	
+	int arr[4] = {1 ,2 ,3 ,4};	
+	 
+	for(i=0;i<4;i = i+1){
+		printf("%d\n",arr[i]);
+	}
+	
+	chuancanarr(arr, 4);
+	
+	for(i=0;i<4;i = i+1){
+		printf("%d\n", arr[i]);
+	}
+	
+	if(arr[0]+arr[1]+arr[2]+arr[3] > 1){
+		printf("123456789\n");
+	}
+	return 0;	
+}

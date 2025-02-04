@@ -1,0 +1,62 @@
+int global;
+ 
+int func1(){
+	global = global + 1;
+	return 1;
+}
+
+int main(){
+	int xuehao = 70216008;
+	printf("%d\n", xuehao);
+	func1();
+	if(global == 1){
+		printf("1\n");
+	}
+	if(global != 0){
+		printf("0\n");
+	}
+	int a = 30, b = 20, c = 10;
+	
+	int i = 0;
+	
+	for(i = 0; i < 5;i = i+1){
+		break;
+	}
+	
+	for(; i < 7;i = i+1){
+		break;
+	}
+	
+	for(i = 0; ;i = i+1){
+		break;
+	}
+	
+	for(i = 0; i < 8 ;){
+		break;
+	}
+	
+	for(i = 0 ;;){
+		break;
+	}
+	
+	for(;a < 100;){
+		printf("1\n");
+		break;
+	}
+	
+	for(;;i = i+1){
+		break;
+	}
+
+	for(;;){
+		break;
+	}
+
+	printf("answer is %d\n", a+b);
+	printf("%d\n", a-b);
+	printf("%d\n", a*b);
+	printf("%d\n", a/b);
+	printf("%d\n", a%b);
+	printf("%d\n", a+b*c);
+	return 0;
+}

@@ -1,0 +1,129 @@
+INTTK int
+IDENFR i
+ASSIGN =
+INTCON 10
+<Number>
+<PrimaryExp>
+<UnaryExp>
+<MulExp>
+MULT *
+LPARENT (
+INTCON 20
+<Number>
+<PrimaryExp>
+<UnaryExp>
+<MulExp>
+<AddExp>
+MINU -
+INTCON 6
+<Number>
+<PrimaryExp>
+<UnaryExp>
+<MulExp>
+<AddExp>
+<Exp>
+<PrimaryExp>
+<UnaryExp>
+<MulExp>
+<AddExp>
+<Exp>
+<InitVal>
+<VarDef>
+SEMICN ;
+<VarDecl>
+CHARTK char
+IDENFR c
+ASSIGN =
+CHRCON 'a'
+<Character>
+<PrimaryExp>
+<UnaryExp>
+<MulExp>
+<AddExp>
+<Exp>
+<InitVal>
+<VarDef>
+SEMICN ;
+<VarDecl>
+INTTK int
+MAINTK main
+LPARENT (
+RPARENT )
+LBRACE {
+IDENFR i
+<LVal>
+ASSIGN =
+GETINTTK getint
+LPARENT (
+RPARENT )
+<Stmt>
+INTCON 10
+<LVal>
+PLUS +
+IDENFR i
+<LVal>
+<PrimaryExp>
+<UnaryExp>
+<MulExp>
+<AddExp>
+<Exp>
+<Stmt>
+IDENFR c
+<LVal>
+ASSIGN =
+GETCHARTK getchar
+LPARENT (
+RPARENT )
+<Stmt>
+IDENFR i
+<LVal>
+ASSIGN =
+GETINTTK getint
+LPARENT (
+SEMICN ;
+<Stmt>
+IDENFR c
+<LVal>
+ASSIGN =
+GETCHARTK getchar
+LPARENT (
+SEMICN ;
+<Stmt>
+FORTK for
+LPARENT (
+SEMICN ;
+SEMICN ;
+RPARENT )
+LBRACE {
+BREAKTK break
+<Stmt>
+LBRACE {
+FORTK for
+LPARENT (
+SEMICN ;
+SEMICN ;
+RPARENT )
+CONTINUETK continue
+<Stmt>
+<Stmt>
+RBRACE }
+<Block>
+<Stmt>
+RBRACE }
+<Block>
+<Stmt>
+<Stmt>
+RETURNTK return
+INTCON 0
+<Number>
+<PrimaryExp>
+<UnaryExp>
+<MulExp>
+<AddExp>
+<Exp>
+SEMICN ;
+<Stmt>
+RBRACE }
+<Block>
+<MainFuncDef>
+<CompUnit>

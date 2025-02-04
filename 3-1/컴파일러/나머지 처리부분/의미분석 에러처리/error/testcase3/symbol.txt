@@ -1,0 +1,4 @@
+1 f VoidFunc
+2 str CharArray
+4 a ConstChar
+5 a CharArray

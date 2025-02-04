@@ -1,0 +1,102 @@
+VOIDTK void
+<FuncType>
+IDENFR f
+LPARENT (
+CHARTK char
+IDENFR str
+LBRACK [
+RBRACK ]
+<FuncFParam>
+COMMA ,
+CHARTK char
+IDENFR str
+LBRACK [
+RBRACK ]
+<FuncFParam>
+<FuncFParams>
+RPARENT )
+LBRACE {
+RBRACE }
+<Block>
+<FuncDef>
+VOIDTK void
+<FuncType>
+IDENFR f
+LPARENT (
+RPARENT )
+LBRACE {
+RBRACE }
+<Block>
+<FuncDef>
+INTTK int
+MAINTK main
+LPARENT (
+RPARENT )
+LBRACE {
+CONSTTK const
+CHARTK char
+IDENFR a
+ASSIGN =
+CHRCON '\\'
+<Character>
+<PrimaryExp>
+<UnaryExp>
+<MulExp>
+<AddExp>
+<ConstExp>
+<ConstInitVal>
+<ConstDef>
+SEMICN ;
+<ConstDecl>
+FORTK for
+LPARENT (
+SEMICN ;
+SEMICN ;
+RPARENT )
+LBRACE {
+CHARTK char
+IDENFR a
+LBRACK [
+INTCON 5
+<Number>
+<PrimaryExp>
+<UnaryExp>
+<MulExp>
+<AddExp>
+<ConstExp>
+RBRACK ]
+<VarDef>
+SEMICN ;
+<VarDecl>
+RBRACE }
+<Block>
+<Stmt>
+<Stmt>
+INTTK int
+IDENFR a
+LBRACK [
+INTCON 10
+<Number>
+<PrimaryExp>
+<UnaryExp>
+<MulExp>
+<AddExp>
+<ConstExp>
+RBRACK ]
+<VarDef>
+SEMICN ;
+<VarDecl>
+RETURNTK return
+INTCON 0
+<Number>
+<PrimaryExp>
+<UnaryExp>
+<MulExp>
+<AddExp>
+<Exp>
+SEMICN ;
+<Stmt>
+RBRACE }
+<Block>
+<MainFuncDef>
+<CompUnit>

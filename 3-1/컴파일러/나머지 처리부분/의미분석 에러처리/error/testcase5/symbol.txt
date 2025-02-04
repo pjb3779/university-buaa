@@ -1,0 +1,15 @@
+1 arr1 IntArray
+1 arr2 CharArray
+1 arr3 ConstIntArray
+1 arr4 ConstCharArray
+1 func1 IntFunc
+1 func2 IntFunc
+2 a CharArray
+2 b Int
+3 a CharArray
+3 b Int
+3 c Int
+4 arr5 CharArray
+4 arr6 CharArray
+4 arr7 ConstIntArray
+4 arr8 ConstIntArray

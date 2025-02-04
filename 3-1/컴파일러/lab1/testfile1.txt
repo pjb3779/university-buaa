@@ -1,0 +1,67 @@
+int global = 100; 
+int arr[4] = {13, 2566, 47, 55};
+
+int func1(){
+	printf("6\n");
+}
+
+int func2(int a, int b){
+	int c = 100 ,sum;
+	sum = (a * b) + c;
+	printf("%d\n", sum);	
+	return 1;
+}
+
+void func3(){
+	printf("1\n");
+	return;
+}
+
+int main(){
+	printf("70216008\n");
+	
+	int size = 4;
+	
+	int a = 10, b = 20;
+	
+	if(0 && func1()){
+		printf("123456");
+	}
+	
+	if(1 || func1()){
+		func2(a, b);
+	}
+	
+	if(0 || 1 || func1()){
+		printf("test7\n");
+	}
+	
+	for(; a < 1000;){
+		printf("%d\n", a + b + arr[3]);
+		printf("%d\n", arr[0] + arr[1] + arr[2] + arr[3]);
+		break;
+	}
+	if(a == 10){
+		if(b <= 10){
+		}
+		if(b >= 10){
+			printf("123\n");
+		}
+		if(b > 10){
+			printf("456\n");
+		}
+		if(b < 10){
+			printf("123\n");
+		}
+		if(global == 100){
+			printf("789\n");
+		}
+	}
+	if(a != 10){
+        printf("%d\n", global);
+    }else{
+        printf("1\n");
+    }
+    
+	return 0;
+}

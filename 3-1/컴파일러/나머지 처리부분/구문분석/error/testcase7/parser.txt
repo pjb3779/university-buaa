@@ -1,0 +1,126 @@
+CONSTTK const
+INTTK int
+IDENFR arr
+LBRACK [
+INTCON 1
+ASSIGN =
+LBRACE {
+INTCON 1
+RBRACE }
+SEMICN ;
+VOIDTK void
+IDENFR f
+LPARENT (
+RPARENT )
+LBRACE {
+CHARTK char
+IDENFR str
+LBRACK [
+INTCON 1
+ASSIGN =
+LBRACE {
+CHRCON 'a'
+RBRACE }
+SEMICN ;
+RETURNTK return
+SEMICN ;
+RBRACE }
+INTTK int
+MAINTK main
+LPARENT (
+RPARENT )
+LBRACE {
+IDENFR f
+LPARENT (
+SEMICN ;
+RETURNTK return
+INTCON 0
+RBRACE }
+CONSTTK const
+INTTK int
+IDENFR arr
+LBRACK [
+INTCON 1
+<Number>
+<PrimaryExp>
+<UnaryExp>
+<MulExp>
+<AddExp>
+<ConstExp>
+ASSIGN =
+LBRACE {
+INTCON 1
+<Number>
+<PrimaryExp>
+<UnaryExp>
+<MulExp>
+<AddExp>
+<ConstExp>
+RBRACE }
+<ConstInitVal>
+<ConstDef>
+SEMICN ;
+<ConstDecl>
+VOIDTK void
+<FuncType>
+IDENFR f
+LPARENT (
+RPARENT )
+LBRACE {
+CHARTK char
+IDENFR str
+LBRACK [
+INTCON 1
+<Number>
+<PrimaryExp>
+<UnaryExp>
+<MulExp>
+<AddExp>
+<ConstExp>
+ASSIGN =
+LBRACE {
+CHRCON 'a'
+<Character>
+<PrimaryExp>
+<UnaryExp>
+<MulExp>
+<AddExp>
+<Exp>
+RBRACE }
+<InitVal>
+<VarDef>
+SEMICN ;
+<VarDecl>
+RETURNTK return
+<Stmt>
+SEMICN ;
+<Stmt>
+RBRACE }
+<Block>
+<FuncDef>
+INTTK int
+MAINTK main
+LPARENT (
+RPARENT )
+LBRACE {
+IDENFR f
+LPARENT (
+<UnaryExp>
+<MulExp>
+<AddExp>
+<Exp>
+SEMICN ;
+<Stmt>
+RETURNTK return
+INTCON 0
+<Number>
+<PrimaryExp>
+<UnaryExp>
+<MulExp>
+<AddExp>
+<Exp>
+<Stmt>
+RBRACE }
+<Block>
+<MainFuncDef>
+<CompUnit>

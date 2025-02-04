@@ -1,0 +1,17 @@
+void test(char a[]){
+	a[2]='l';
+	printf("%d\n",a[3]);
+}
+
+
+char fun(char a[]){
+	test(a);
+    return 'a';
+}
+int main()
+{
+    char a[10]="abcdefg";
+    fun(a);
+   printf("%c\n",a[2]);
+    return 0;
+}

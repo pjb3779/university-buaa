@@ -1,0 +1,2 @@
+1 i Int
+1 c Char

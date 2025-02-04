@@ -1,0 +1,5 @@
+1 f0 VoidFunc
+1 f1 VoidFunc
+3 x Int
+3 y Int
+3 z Int

@@ -1,0 +1,49 @@
+char cpm(char a, char b){
+	if(a > b){
+		return a;
+	} else{
+		return b;
+	}
+}
+
+int plus(int a, int b){
+	return a + b;
+}
+
+int main(){
+	int xuehao, i;
+	xuehao = getint();
+	printf("%d\n",xuehao);
+	
+	char char1;
+	char1 = getchar();
+	char char2 = 'z';
+	
+	char result = cpm(char1, char2);
+	 
+	printf("%c\n",result);	
+	
+	const int ci = 1;
+	const int c2 = 2;
+	const char cc1 = 'w';
+	
+	int a = 10, b = 20, c;
+	c = plus(a,b);
+	
+	for(i = 0;i < 5;i = i+ 1){
+		if(a > 0){
+			continue;
+		}
+	}
+	
+	int d = -a;
+	int f = +a;
+	
+	printf("%d\n", !xuehao);
+	printf("%d\n", c);
+	printf("%d\n", ci);
+	printf("%c\n", cc1);
+	printf("%d\n", d);
+	printf("%d\n", f);
+	return 0;
+}

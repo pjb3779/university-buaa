@@ -1,0 +1,16 @@
+1 a Int
+1 b Int
+1 c Int
+1 ca ConstInt
+1 cb ConstInt
+1 car ConstCharArray
+1 func IntFunc
+2 a Int
+2 b Int
+2 r Int
+3 a ConstInt
+3 b ConstInt
+3 c Char
+3 e Char
+3 r Int
+3 arr IntArray

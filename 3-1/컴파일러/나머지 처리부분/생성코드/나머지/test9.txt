@@ -1,0 +1,7 @@
+int a[1] = {0};
+
+int main() {
+const int a = 2, b[1] = {a / 3};
+return 0;
+}
+b[1] = {a / 3}; 처럼 선언시 exp파싱 처리

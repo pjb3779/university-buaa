@@ -1,0 +1,14 @@
+
+char functionReturnChar() {
+    printf("Function returning a character\n"); // 5th printf
+    return 'C'; // Return character constant
+}
+
+int main() {
+	
+    char ch = functionReturnChar(); // Function returning char
+    printf("Character returned: %c\n", ch); // 7th printf
+
+    return 0;
+}
+

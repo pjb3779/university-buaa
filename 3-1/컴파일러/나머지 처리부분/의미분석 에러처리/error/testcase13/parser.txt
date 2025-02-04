@@ -1,0 +1,39 @@
+VOIDTK void
+<FuncType>
+IDENFR f1
+LPARENT (
+RPARENT )
+LBRACE {
+RETURNTK return
+<Stmt>
+SEMICN ;
+<Stmt>
+RBRACE }
+<Block>
+<FuncDef>
+VOIDTK void
+<FuncType>
+IDENFR f2
+LPARENT (
+RPARENT )
+LBRACE {
+RETURNTK return
+<Stmt>
+SEMICN ;
+<Stmt>
+RBRACE }
+<Block>
+<FuncDef>
+INTTK int
+MAINTK main
+LPARENT (
+RPARENT )
+LBRACE {
+RETURNTK return
+<Stmt>
+SEMICN ;
+<Stmt>
+RBRACE }
+<Block>
+<MainFuncDef>
+<CompUnit>

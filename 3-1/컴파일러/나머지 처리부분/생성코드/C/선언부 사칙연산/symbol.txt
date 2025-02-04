@@ -1,0 +1,2 @@
+1 functionReturnChar CharFunc
+3 ch Char

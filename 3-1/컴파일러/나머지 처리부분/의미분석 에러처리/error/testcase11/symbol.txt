@@ -1,0 +1,2 @@
+2 a ConstChar
+2 s ConstCharArray

@@ -1,0 +1,6 @@
+1 x Int
+1 f3 VoidFunc
+1 f4 IntFunc
+2 a Int
+3 a Int
+4 k Int

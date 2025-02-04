@@ -1,0 +1,78 @@
+INTTK int
+MAINTK main
+LPARENT (
+RPARENT )
+LBRACE {
+CONSTTK const
+CHARTK char
+IDENFR a
+ASSIGN =
+CHRCON '\''
+<Character>
+<PrimaryExp>
+<UnaryExp>
+<MulExp>
+<AddExp>
+<ConstExp>
+<ConstInitVal>
+<ConstDef>
+SEMICN ;
+<ConstDecl>
+IDENFR a
+<LVal>
+ASSIGN =
+CHRCON '\"'
+<Character>
+<PrimaryExp>
+<UnaryExp>
+<MulExp>
+<AddExp>
+<Exp>
+SEMICN ;
+<Stmt>
+CONSTTK const
+CHARTK char
+IDENFR s
+LBRACK [
+INTCON 15
+<Number>
+<PrimaryExp>
+<UnaryExp>
+<MulExp>
+<AddExp>
+<ConstExp>
+ASSIGN =
+STRCON "hello world"
+<ConstInitVal>
+<ConstDef>
+SEMICN ;
+<ConstDecl>
+IDENFR s
+LBRACK [
+INTCON 10
+<Number>
+<PrimaryExp>
+<UnaryExp>
+<MulExp>
+<AddExp>
+<Exp>
+RBRACK ]
+<LVal>
+ASSIGN =
+CHRCON '*'
+<Character>
+<PrimaryExp>
+<UnaryExp>
+<MulExp>
+<AddExp>
+<Exp>
+SEMICN ;
+<Stmt>
+RETURNTK return
+<Stmt>
+SEMICN ;
+<Stmt>
+RBRACE }
+<Block>
+<MainFuncDef>
+<CompUnit>
