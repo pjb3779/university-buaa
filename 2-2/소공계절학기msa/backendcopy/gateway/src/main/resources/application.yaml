@@ -1,0 +1,56 @@
+server:
+  port: 8080
+spring:
+  main:
+    web-application-type: reactive
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+  application:
+    name: gateway
+  cloud:
+    nacos:
+      server-addr: 127.0.0.1:8848
+    gateway:
+      routes:
+
+        - id: bookshelf
+          uri: http://localhost:8090
+          predicates:
+            - Path=/bookshelf/**
+
+        - id: chapter
+          uri: http://localhost:8091
+          predicates:
+            - Path=/chapters/**
+
+        - id: comment
+          uri: http://localhost:8092
+          predicates:
+            - Path=/comments/**
+
+        - id: document
+          uri: http://localhost:8093
+          predicates:
+            - Path=/documents/**
+            
+        - id: document
+          uri: http://localhost:8093
+          predicates:
+            - Path=/records/**
+
+        - id: draft
+          uri: http://localhost:8094
+          predicates:
+            - Path=/drafts/**
+
+        - id: message
+          uri: http://localhost:8095
+          predicates:
+            - Path=/messages/**
+
+        - id: user
+          uri: http://localhost:8096
+          predicates:
+            - Path=/users/**
+
+

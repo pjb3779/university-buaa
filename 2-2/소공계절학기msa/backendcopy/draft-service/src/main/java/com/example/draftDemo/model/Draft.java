@@ -1,0 +1,40 @@
+package com.example.draftDemo.model;
+
+public class Draft {
+    private String title;
+    private String content;
+    private int userID;
+    private String currentModityTime; // 对应数据库中的 DATETIME 字段
+    private int id;
+    public int getId() {
+        return id;
+    }
+    public void setId(int id) {
+        this.id = id;
+    }
+    public String getCurrentModityTime() {
+        return currentModityTime;
+    }
+    public void setCurrentModityTime(String currentModityTime) {
+        this.currentModityTime = currentModityTime;
+    }
+
+    public String getContent() {
+        return content;
+    }
+    public String getTitle() {
+        return title;
+    }
+    public int getUserID() {
+        return userID;
+    }
+    public void setContent(String content) {
+        this.content = content;
+    }
+    public void setTitle(String title) {
+        this.title = title;
+    }
+    public void setUserID(int userID) {
+        this.userID = userID;
+    }
+}
