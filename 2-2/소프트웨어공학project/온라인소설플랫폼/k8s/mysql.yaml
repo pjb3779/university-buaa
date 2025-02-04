@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+  namespace: myapp
+spec:
+  ports:
+    - port: 3306
+  selector:
+    app: mysql
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-deployment
+  namespace: myapp
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0 # 使用官方MySQL镜像
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: Sql0424isbest! # 替换为你的MySQL root密码
+            - name: MYSQL_DATABASE
+              value: docreading   # 初始化数据库名称
+            - name: MYSQL_USER
+              value: sql
+            - name: MYSQL_PASSWORD
+              value: sql123
+          volumeMounts:
+            - name: mysql-temp-storage
+              mountPath: /var/lib/mysql
+            - name: mysql-initdb
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: mysql-temp-storage
+          emptyDir: {} # 临时存储，也可以替换为持久存储
+        - name: mysql-initdb
+          configMap:
+            name: mysql-initdb-config
+          

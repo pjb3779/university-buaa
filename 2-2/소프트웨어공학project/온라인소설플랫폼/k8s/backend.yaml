@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: myapp
+spec:
+  # type: NodePort
+  ports:
+    - port: 8081
+      targetPort: 8081
+      # nodePort: 30002
+  selector:
+    app: backend
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  namespace: myapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: 2244509212/backend:latest
+          ports:
+            - containerPort: 8081
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:mysql://mysql-service:3306/docreading
+            - name: SPRING_DATASOURCE_USERNAME
+              value: sql
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: sql123
