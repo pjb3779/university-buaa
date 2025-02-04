@@ -1,0 +1,50 @@
+.data
+prompt: .asciiz "Enter a number: "
+result_prime: .asciiz "Prime\n"
+result_not_prime: .asciiz "Not Prime\n"
+
+.text
+.globl main
+
+main:
+    # 사용자로부터 입력 받기
+    li $v0, 4                # 출력 시스템 호출
+    la $a0, prompt           # 프롬프트 주소
+    syscall
+
+    li $v0, 5                # 입력 시스템 호출
+    syscall
+    move $t0, $v0            # 사용자 입력을 $t0에 저장 (입력 값)
+
+    # 입력 값이 1이면 소수가 아님
+    li $t1, 1
+    beq $t0, $t1, not_prime  # 1이면 "Not Prime" 출력
+
+    # 2부터 n-1까지 나누어 떨어지는 수가 있는지 확인
+    li $t1, 2                # $t1 = 2
+    li $t2, 0                # $t2 = 0 (소수 여부 flag)
+
+check_divisor:
+    div $t0, $t1             # $t0 / $t1
+    mfhi $t3                 # 나머지를 $t3에 저장
+    beq $t3, $zero, not_prime # 나머지가 0이면 나누어 떨어짐 (소수 아님)
+
+    addi $t1, $t1, 1         # $t1을 1 증가
+    bge $t1, $t0, prime      # $t1이 $t0보다 커지면 종료 (소수)
+
+    j check_divisor
+
+not_prime:
+    li $v0, 4                # 출력 시스템 호출
+    la $a0, result_not_prime # "Not Prime" 출력
+    syscall
+    j end
+
+prime:
+    li $v0, 4                # 출력 시스템 호출
+    la $a0, result_prime     # "Prime" 출력
+    syscall
+
+end:
+    li $v0, 10               # 프로그램 종료 시스템 호출
+    syscall
