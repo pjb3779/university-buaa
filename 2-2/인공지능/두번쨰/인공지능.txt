@@ -1,0 +1,55 @@
+from paddle.io import TensorDataset
+
+def get_pseudo_labels(dataset, model, threshold=0.65):
+    # 此函数使用给定模型生成数据集的伪标签。
+    # 它返回一个 DatasetFolder 实例，其中包含预测图片logits置信度超过给定阈值的图片。
+  
+    # 构造一个数据加载器。
+    data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, drop_last=False)
+
+    # 确保模型处于 eval 模型）禁止训练。
+    model.eval()
+    # 定义softmax函数
+    softmax = nn.Softmax(axis=-1)
+    # 训练
+    for batch_id, data in enumerate(data_loader):
+        batch_img, _ = data
+        # 使用 torch.no_grad() 加速了前向过程。
+        with paddle.no_grad():
+            logits = model(batch_img)
+
+        # 通过对 logits 应用 softmax 来获得概率分布。
+        probs = softmax(logits)
+        
+        max_probs, preds = paddle.max(probs, axis=1)
+        
+        mask = max_probs > threshold
+        filtered_images =  batch_img[mask]
+        filtered_labels = preds[mask]
+
+        new_data.extend(list(zip(filtered_images.numpy(), filtered_labels.numpy())))
+
+    new_dataset = TensorDataset(new_data)
+        # --------------------------------
+
+    return new_dataset
+
+
+# 当你需要进行半监督训练时修改以下的do_semi为True，构建semi_train_loader后，再次运行模型训练单元格（# 加载模型 开始训练单元格）即可
+# 注意：使用半监督的前提条件是你的模型已经可以取得一定的效果
+# 当你进行半监督训练时，你的模型已经是训练过的，所以,你应该调整相关参数（n_epochs,learning_rate)
+do_semi=False
+threshold =
+if do_semi:
+    # ---------- TODO ----------
+    # 使用经过训练的模型获取未标记数据的伪标签（提示：调用get_pseudo_labels函数）。
+
+
+    semi_train_dataset = get_pseudo_labels(unlabeled_dataset, model, threshold)
+    # --------------------------------
+    # 构造一个新的数据集和一个用于训练的数据加载器。
+    semi_train_loader = DataLoader(semi_train_dataset, batch_size=batch_size, shuffle=True, drop_last=False)
+    init_model=False
+    # 置init_model为False，确保再次再次运行模型训练单元格时，不会重新初始化模型
+
+
