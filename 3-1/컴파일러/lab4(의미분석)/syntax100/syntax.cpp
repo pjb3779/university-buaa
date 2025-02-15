@@ -1,4 +1,5 @@
 #include <iostream>
+#include <stack>
 #include <stdio.h>
 #include <cstring>
 #include <string>
@@ -33,10 +34,10 @@ void parseCompUnit();
 void parseDecl();
 void parseConstDecl();
 void parseBType();
-void parseConstDef(int type);
+void parseConstDef(int type, int  kind);
 void parseConstInitVal();
 void parseVarDecl();
-void parseVarDef(int type);
+void parseVarDef(int type, int kind);
 void parseInitVal();
 void parseFuncDef();
 void parseMainFuncDef();
@@ -56,7 +57,7 @@ void parseNumber();
 void parseCharacter();
 int parseUnaryExp(int type);
 void parseUnaryOp();
-void parseFuncRParams();
+int parseFuncRParams();
 int parseMulExp(int type);
 int parseAddExp(int type);
 void parseRelExp();
@@ -65,19 +66,18 @@ void parseLAndExp();
 void parseLOrExp();
 void parseConstExp();
 void parseErrorA();
-bool parseErrorB(string name, int type, int kind, int curscope);
+bool parseErrorB(string name, int type, int kind, int isconst, int nowScope);
 void parseErrorC(string name);
-void parseErrorD(string name, int cnt, int funcline);
-void parseErrorE();
+void parseErrorD(int funcline);
+void parseErrorE(int param_num);
 void parseErrorF(int linenum);
 void parseErrorG();
 void parseErrorH(string name);
-void parseErrorI();
+bool parseErrorI();
 bool parseErrorJ();
 void parseErrorK();
 void parseErrorL(string formatString, int print_param_cnt, int printlinenum);
 void parseErrorM();
-
 void print_err_list();
 
 ifstream inputFile;
@@ -102,8 +102,6 @@ enum KindEnum {
 enum TypeEnum {
 	INT,
 	CHAR,
-	CONSTINT,
-	CONSTCHAR,
 	VOID
 };
 
@@ -126,51 +124,93 @@ int err_top = 0;
 struct SymbolTable{
 	string name;
 	int type = -1;	//0 = int, 1 = char, 2 = void
-	int kind = -1;	//0 = const, 1 = var, 2 = func, 3 = param
+	int kind = -1;	//0 = var, 1 = func, 2 = param, 3 = arr
+	int isconst = 0;	//cosnt = 1, not const = 0
 	int scope;
 };
 SymbolTable symbolTable[100001];
+SymbolTable SymbolTemp;
+SymbolTable printfSymbol[10001];
+int print_top = 0;
+stack<int> scopeStack;
 
-int glb_SS= 1;	//symbol_scope	블이 시작할때마다++ 
 int ST_top = 0;		//symbotabletop
+int glb_SS= 1;	//symbol_scope	블이 시작할때마다++ 
 int curScope = 1;	
 int funcStartScope = 0; //함수시작시 스코프
+int last_func_line; //errord 처리 
+
+void InBlock() {
+    glb_SS++;
+    curScope = glb_SS;
+    scopeStack.push(curScope); // 새로운 스코프를 스택에 추가
+}
+
+void OutBlock() {
+    if (!scopeStack.empty()) {
+        scopeStack.pop();
+        if (!scopeStack.empty()) {
+            curScope = scopeStack.top();
+        }
+    }
+}
+
+SymbolTable* findSymbol(string name) {
+    for (int i = ST_top; i >= 0; i--) { // 심볼 테이블을 역순으로 검색
+        if (symbolTable[i].name == name && symbolTable[i].scope == curScope) {
+            return &symbolTable[i];
+        }
+    }
+    return nullptr;
+}
+
+SymbolTable* findSymbol(string name, int scope) {
+    for (int i = ST_top; i >= 0; i--) { // 심볼 테이블을 역순으로 검색
+        if (symbolTable[i].name == name && symbolTable[i].scope == scope) {
+            return &symbolTable[i];
+        }
+    }
+    return nullptr;
+}
+
 bool isglbscope = true;		//전역변수라면 
 bool isequalScope = false;	//함수 시작 스코프와 같으면 
 
 bool isneedreturn = true;		//리턴이 필요한 함수판달 
 bool isstmtreturn = false;		// stmt에 리턴이 나왔는지 판단 
 bool isBorC = false;			// 브레이크나 컨티뉴인지  
-bool isfuncparam = false;		//함수 매개변수 선언중인가 
+bool isfuncparam = false;
 bool isfuncDef = false;		//에러e처리 함수선언인지 아닌지 확인 
-bool isifelse = false;		//errG if else문에서 return은 무시
+bool isifelse = false;		//if else시 리턴 무시 
 
-void add_s_Table(string name, int type, int kind){
+struct funcparam{
+	int type;//0 = int, 1 = char, 2 = void
+	string name;
+	int paramcnt = 0;
+	vector<int> paramtype;
+	vector<int> paramkind;
+	int expectedcnt = 0;
+};
+funcparam funcInfo[100001];
+int funcInfo_top = 0;
+vector<funcparam> funcparse;
+
+void add_s_Table(string name, int type, int kind, int isconst){
 	symbolTable[ST_top].name = name;
 	symbolTable[ST_top].type = type;
 	symbolTable[ST_top].kind = kind;
+	symbolTable[ST_top].isconst = isconst;
 	if(isglbscope){
 		symbolTable[ST_top].scope = 1;
 	}else if(isequalScope) {
+		symbolTable[ST_top].scope = curScope;
+	}else if(glb_SS != curScope){
 		symbolTable[ST_top].scope = curScope;
 	}else {
 		symbolTable[ST_top].scope = glb_SS;
 	}
 	ST_top++;
 }
-
-struct funcparam{
-	string name;
-	int type;
-	int kind;
-	int paramcnt = 0;
-	int paramcurpos = 0; 	//현재 매개변수 위치
-	vector<int> paramtype;
-};
-funcparam funcInfo[10001];
-vector<funcparam> ErrEtemp;
-int funcInfo_top = 0;
-int ErrEtemp_top = 0;
 
 void push_Token_list(string Token, string word) {
     Token_list[Tlist_top].Token = Token;
@@ -195,17 +235,46 @@ bool compareErrLine(const error_word& a, const error_word& b) {
     return a.linenum < b.linenum;
 }
 
-void print_err_list(){
-	int last_print_line = -1;
-	sort(error_list, error_list + err_top, compareErrLine);
-	
-	for(int i = 0; i < err_top ; i++){
-		if(error_list[i].linenum != last_print_line){	//동일라인에서 발생한에러는 출력x 
-			cout << error_list[i].linenum << " " << error_list[i].err_type << endl;
-			errorFile << error_list[i].linenum << " " << error_list[i].err_type << endl;
-			last_print_line = error_list[i].linenum;
-		}
-	}
+//void print_err_list(){
+//	sort(error_list, error_list + err_top, compareErrLine);
+//	
+//	for(int i = 0; i < err_top ; i++){
+//		cout << error_list[i].linenum << " " << error_list[i].err_type << endl;
+//		errorFile << error_list[i].linenum << " " << error_list[i].err_type << endl;
+//	}
+//}
+void print_err_list() {
+    // 에러 리스트를 먼저 알파벳순으로 정렬한 다음, 줄 번호를 기준으로 다시 정렬
+    sort(error_list, error_list + err_top, [](const error_word& a, const error_word& b) {
+       if (a.linenum == b.linenum) {
+       		if (a.err_type == 'd' && b.err_type != 'd') {
+          		return true; 
+        	} else if (a.err_type != 'd' && b.err_type == 'd') {
+            	return false;
+        	}
+            return a.err_type > b.err_type; // 같은 줄에서는 에러 유형을 알파벳 순으로 정렬
+       }
+        return a.linenum < b.linenum; // 줄 번호를 기준으로 정렬
+    });
+
+    int last_line = -1; // 마지막 출력된 줄 번호
+
+    for (int i = 0; i < err_top; i++) {
+        int line_num = error_list[i].linenum;
+        char err_type = error_list[i].err_type;
+
+//        // 이전과 같은 줄에서의 에러는 건너뜀
+        if (line_num == last_line ) {
+            continue;
+        }
+
+        // 에러 출력
+        cout << line_num << " " << err_type << endl;
+        errorFile << line_num << " " << err_type << endl;
+
+        // 마지막 출력된 줄 번호 갱신
+        last_line = line_num;
+    }
 }
 
 bool compareSymbolScope(const SymbolTable &a, const SymbolTable &b){
@@ -217,27 +286,29 @@ void print_symbol_list(){
 	
 	for(int i = 0; i < ST_top ; i++){
 		string temp;
-		if(symbolTable[i].type == 0 && symbolTable[i].kind == 0){
+		if(symbolTable[i].isconst == 1){
+			if(symbolTable[i].type == 0 && symbolTable[i].kind == 0){
+    			temp = "ConstInt";
+			} else if(symbolTable[i].type == 0 && symbolTable[i].kind == 3){
+	   	 		temp = "ConstIntArray";
+			} else if(symbolTable[i].type == 1 && symbolTable[i].kind == 0){
+	    		temp = "ConstChar";
+			} else if(symbolTable[i].type == 1 && symbolTable[i].kind == 3){
+    			temp = "ConstCharArray";
+			}
+		} else if(symbolTable[i].type == 0 && symbolTable[i].kind == 0){
     		temp = "Int";
 		} else if(symbolTable[i].type == 0 && symbolTable[i].kind == 3){
     		temp = "IntArray";
-		} else if(symbolTable[i].type == 2 && symbolTable[i].kind == 0){
-    		temp = "ConstInt";
-		} else if(symbolTable[i].type == 2 && symbolTable[i].kind == 3){
-	   	 	temp = "ConstIntArray";
 		} else if(symbolTable[i].type == 1 && symbolTable[i].kind == 0){
 	   	 	temp = "Char";
 		} else if(symbolTable[i].type == 1 && symbolTable[i].kind == 3){
     		temp = "CharArray";
-		} else if(symbolTable[i].type == 3 && symbolTable[i].kind == 0){
-	    	temp = "ConstChar";
-		} else if(symbolTable[i].type == 3 && symbolTable[i].kind == 3){
-    		temp = "ConstCharArray";
 		} else if(symbolTable[i].type == 0 && symbolTable[i].kind == 1){
    		 	temp = "IntFunc";
 		} else if(symbolTable[i].type == 1 && symbolTable[i].kind == 1){
     		temp = "CharFunc";
-		} else if(symbolTable[i].type == 4 && symbolTable[i].kind == 1){
+		} else if(symbolTable[i].type == 2 && symbolTable[i].kind == 1){
     		temp = "VoidFunc";
 		} 
 		cout << symbolTable[i].scope << " " 
@@ -284,16 +355,10 @@ void Lexical_Analysis_run() {
 	} else if(input_text[curpos] == '"'){
 		Token += input_text[curpos];
 		curpos++;
-    while(input_text[curpos] != '"') {
-        // 이스케이프된 큰따옴표 처리 추가
-        if(input_text[curpos] == '\\' && input_text[curpos + 1] == '"') {
-            Token += "\\\"";
-            curpos += 2;
-        } else {
-            Token += input_text[curpos];
-            curpos++;
-        }
-    }
+		while(input_text[curpos] != '"'){
+			Token += input_text[curpos];
+			curpos++;
+		}
 		Token += input_text[curpos];
 		curpos++;
 		push_Token_list("STRCON", Token);
@@ -401,8 +466,9 @@ void Lexical_Analysis_run() {
 	        Token += '\\';
 	        curpos++;
 	        if(input_text[curpos] == 'n' || input_text[curpos] == 't' || input_text[curpos] == 'v' ||
-	           input_text[curpos] == '\\' || input_text[curpos] == '\'' || 
-	           input_text[curpos] == '0' || input_text[curpos] == 'f' || input_text[curpos] == '"') {
+	           input_text[curpos] == '\\' || input_text[curpos] == '\'' || input_text[curpos] == '\"' ||
+	           input_text[curpos] == 'a' || input_text[curpos] == 'b' || 
+	           input_text[curpos] == '0' || input_text[curpos] == 'f') {
 	            Token += input_text[curpos];
 	            curpos++;
 	        }
@@ -419,8 +485,9 @@ void Lexical_Analysis_run() {
 	        curpos++;
 	        push_Token_list("CHRCON", Token);
 	   	}
+	} else {
+		curpos++;
 	}
-	check_LineNum();
 }
 
 bool check_Char_Type(int check){
@@ -464,16 +531,20 @@ void push_TypeToken() {
     }
 }
 
-void check_LineNum() {
-    while(curpos < input_text_len && (input_text[curpos] == '\n')){
-    	glb_linenum++;
-    	curpos++;
-	}
-}
+//void check_LineNum() {
+//    while(curpos < input_text_len && (input_text[curpos] == '\n')){
+//    	glb_linenum++;
+//    	curpos++;
+//	}
+//}
 
 void skipBlank() {
     while (curpos < input_text_len &&
-	(input_text[curpos] == ' ' || input_text[curpos] == '\t' || input_text[curpos] == '\r')) {
+	(input_text[curpos] == ' ' || input_text[curpos] == '\t' || 
+	input_text[curpos] == '\r' || input_text[curpos] == '\n')) {
+		if(input_text[curpos] == '\n'){
+			glb_linenum++;
+		}
     	curpos++;
     }
 }
@@ -549,7 +620,7 @@ void init() {
     }
     
     outputFile2.open("symbol.txt");
-    if (!outputFile.is_open()) {
+    if (!outputFile2.is_open()) {
         cerr << "can't open symbol file" << endl;
         return;
     }
@@ -571,8 +642,8 @@ void init() {
 
 void Lexical_Analysis() {
     while (curpos < input_text_len) {
-        skipBlank();       // 공백 문자 건너뛰기    	
-        check_LineNum();     // 줄번호 처리
+    	skipBlank();       // 공백 문자 건너뛰기
+ //       check_LineNum();     // 줄번호 처리  	
         
         // 토큰이 인식되지 않는 경우에도 curpos를 증가시켜 무한 루프를 방지
         int previous_pos = curpos;
@@ -663,22 +734,23 @@ void parseDecl() {
 //ConstDecl → 'const' BType ConstDef { ',' ConstDef } ';' // i
 void parseConstDecl() {
 	int type = -1;
+	int kind = 0;
 	
 	printcurToken();//const
 	nextToken();
 	printcurToken();//Btype
 	if(curToken.word == "int"){
-		type = CONSTINT;
+		type = INT;
 	} else {	//char처리 
-		type = CONSTCHAR;
+		type = CHAR;
 	}
 	nextToken();
 	
-	parseConstDef(type);
+	parseConstDef(type, kind);
 	while(curToken.word == ","){ // ,후 연속선언 처리  
 		printcurToken();
 		nextToken();
-		parseConstDef(type);
+		parseConstDef(type, kind);
 	}	
 	
 	parseErrorI(); //  ;
@@ -687,14 +759,12 @@ void parseConstDecl() {
 }
 
 //ConstDef → Ident [ '[' ConstExp ']' ] '=' ConstInitVal // k
-void parseConstDef(int type) {
+void parseConstDef(int type, int kind) {
 	last_nonT = curToken.line_num;
 	
 	printcurToken();//Ident
-	string Identname = curToken.word;
+	string identname = curToken.word;
 	nextToken();
-	
-	int kind = VAR;
 	
 	if(curToken.word == "["){	//배열 선언 처리 
 		printcurToken();//[
@@ -704,9 +774,10 @@ void parseConstDef(int type) {
 		
 		parseErrorK(); //  ]
 		
-		kind = ARR;
+		kind = 3;
 	}
-	parseErrorB(Identname, type, kind, glb_SS);
+	
+	parseErrorB(identname, type, kind, 1, glb_SS);
 	
 	printcurToken();//=
 	nextToken();
@@ -752,10 +823,11 @@ void parseConstInitVal() {
 }
 
 //VarDecl → BType VarDef { ',' VarDef } ';' // i
-void parseVarDecl() {
+void parseVarDecl() {	
 	printcurToken(); // BType
 	
 	int type = -1;
+	int kind = 0;
 	if(curToken.word == "int"){
 		type = INT;
 	} else{		//char 처리 
@@ -764,13 +836,13 @@ void parseVarDecl() {
 	
 	nextToken();
 	
-	parseVarDef(type);
+	parseVarDef(type, kind);
 	
 	while(curToken.word == ","){
 		printcurToken();	//,
 		nextToken();
 		
-		parseVarDef(type);
+		parseVarDef(type, kind);
 	}
 	
 	parseErrorI(); //  ;
@@ -779,14 +851,12 @@ void parseVarDecl() {
 };
 
 //VarDef → Ident [ '[' ConstExp ']' ] | Ident [ '[' ConstExp ']' ] '=' InitVal // k
-void parseVarDef(int type) {
+void parseVarDef(int type, int kind) {
 	last_nonT = curToken.line_num;
 	
 	printcurToken();//Ident
-	string Identname = curToken.word;
+	string identname = curToken.word;
 	nextToken();
-	
-	int kind = VAR;
 	
 	if(curToken.word == "["){	//배열 선언 처리 
 		printcurToken();//[
@@ -798,7 +868,7 @@ void parseVarDef(int type) {
 		kind = ARR;
 	}
 	
-	parseErrorB(Identname, type, kind, glb_SS);
+	parseErrorB(identname, type, kind, 0, glb_SS);
 	
 	if(curToken.word == "="){	//배열 선언 + 초기화 
 		printcurToken();//=
@@ -844,10 +914,9 @@ void parseInitVal() {
 void parseFuncDef() {
 	int type = - 1;
 	int kind = FUNC;
-	
-	isfuncDef = true;
+//	isfuncDef = true; 
+	isstmtreturn = false;
 	isneedreturn = true;
-	isstmtreturn = false;    //void따로 처리 
 	
 	if(curToken.word == "int" || curToken.word == "char" || curToken.word == "void"){
 		if(curToken.word == "int"){
@@ -860,20 +929,22 @@ void parseFuncDef() {
 		}
 		parseFuncType();
 	}
-		
+	
 	printcurToken();// Ident
-	string Identname = curToken.word;
+	string identname = curToken.word;
 	nextToken();
 	
-	if(!parseErrorB(Identname, type, kind, glb_SS)){		//유효한 함수면 추가  
-		funcInfo[funcInfo_top].name = Identname;
-		funcInfo[funcInfo_top].type = type;
-		funcInfo[funcInfo_top].kind = kind;
+	funcInfo[funcInfo_top].type = type;
+	funcInfo[funcInfo_top].name = identname;
+	
+	bool valid_func = false;
+	if(parseErrorB(identname, type, kind, 0, 1)){
+		valid_func = true;
 	}
 	
+	glb_SS++;	//함수 지역변수 처리를 위해+ 
 	printcurToken();// (
 	last_nonT = curToken.line_num;
-	glb_SS++;	//함수 지역변수 처리를 위해+ 
 	curScope = glb_SS; 
 	isglbscope = false;
 	nextToken();
@@ -892,9 +963,11 @@ void parseFuncDef() {
 	curScope = glb_SS + 1; 
 	isglbscope = true;
 	
-	funcInfo_top++;
+	if(valid_func){
+		funcInfo_top++;	//함수정보 ++	
+	}
 	
-	isfuncDef = false;
+//	isfuncDef = false; 
 	printSyntax("FuncDef");
 }
 
@@ -914,7 +987,7 @@ void parseMainFuncDef() {
 	nextToken();
 	
 	parseErrorJ(); //  )
-
+	
 	isglbscope = false; 
 	curScope = glb_SS;
 	funcStartScope = glb_SS + 1;
@@ -960,7 +1033,7 @@ void parseFuncFParam() {
 	}
 	nextToken();
 	printcurToken();//	Ident
-	string Identname = curToken.word;
+	string identname = curToken.word;
 	nextToken();
 	
 	int kind = VAR;
@@ -972,19 +1045,19 @@ void parseFuncFParam() {
 		parseErrorK();
 		
 		kind = ARR;
-	}
-	parseErrorB(Identname, type, kind, glb_SS);
+	}	
+	parseErrorB(identname, type, kind, 0, glb_SS);
 	funcInfo[funcInfo_top].paramtype.push_back(type);	//int = 0. char = 1
+	funcInfo[funcInfo_top].paramkind.push_back(kind);   //var = 0, arr = 3 
 	funcInfo[funcInfo_top].paramcnt++;
-	
+
 	printSyntax("FuncFParam");	
 }
 
 //'{' { BlockItem } '}' 
 void parseBlock() {
 	printcurToken();//	{
-	glb_SS++;	//블럭이면 증가 
-	curScope++;
+	InBlock();
 	if(funcStartScope == curScope){
 		isequalScope = true;
 	} else{
@@ -1004,13 +1077,12 @@ void parseBlock() {
 	printcurToken();//	}
 	isstmtreturn = false;
 	
-	curScope--;
+	OutBlock();
 	if(funcStartScope == curScope){	//블럭 탈출할시 다시한번 비교 
 		isequalScope = true;
 	}
+	
 	nextToken();
-	
-	
 	printSyntax("Block");	
 }
 
@@ -1030,10 +1102,10 @@ void parseStmt() {
 	last_nonT = curToken.line_num;
 	
 	if(curToken.word == "if") {// 'if' '(' Cond ')' Stmt [ 'else' Stmt ] // j
+		isifelse = true;
+		 
 		printcurToken();//	if
 		nextToken();
-		
-		isifelse = true;
 		
 		printcurToken();//	(
 		nextToken();
@@ -1048,10 +1120,9 @@ void parseStmt() {
 			printcurToken();//	else
 			nextToken();	
 			
-			isifelse = true;
-			
 			parseStmt();
 		}
+		isifelse = false;
 	} 
 	//'for' '(' [ForStmt] ';' [Cond] ';' [ForStmt] ')' Stmt 
 	else if(curToken.word == "for") {
@@ -1065,6 +1136,7 @@ void parseStmt() {
 		
 		if(curToken.word != ";"){
 			parseForStmt();
+			
 		}
 		
 		printcurToken();//	첫번째;
@@ -1089,10 +1161,11 @@ void parseStmt() {
 	} 
 	//'break' ';' | 'continue' ';' // 
 	else if(curToken.word == "break" || curToken.word == "continue"){
-		parseErrorM();
-		
 		printcurToken();//	break or continue
 		last_nonT = curToken.line_num;
+		
+		parseErrorM();
+		
 		nextToken();
 		
 		parseErrorI();
@@ -1101,22 +1174,27 @@ void parseStmt() {
 	else if(curToken.word == "return"){
 		printcurToken();//	return
 		last_nonT = curToken.line_num;
-		int returnline = curToken.line_num;    //last_nonT로 대체가능 
+		int returnline = curToken.line_num;	
 		
-		if(isifelse){
-			isifelse = false;	
-		} else{
+		if(!isifelse){
 			isstmtreturn = true;
 		}
 		
 		nextToken();
 		
-		if(curToken.word != ";"){//exp 확인 
+		if(isdigit(curToken.word[0]) || curToken.Token == "CHRCON" || 
+		curToken.word == "(" || curToken.Token == "IDENFR" || curToken.Token == "MINU"
+		|| curToken.Token == "PLUS"){
 			parseErrorF(returnline);
 			parseExp();
-		} 
+			parseErrorI();
+		} else {
+			parseErrorI();
+		}	
 		
-		parseErrorI();
+		if(curToken.word == ";"){
+			
+		}
 	}
 	//'printf''('StringConst {','Exp}')'';' // i j
 	else if(curToken.word == "printf"){
@@ -1141,9 +1219,11 @@ void parseStmt() {
 			expcnt++;
 		}
 		
-		parseErrorJ();
+		parseErrorJ();	
 		parseErrorI();
-		parseErrorL(temp, expcnt, printlinenum);
+//		if(expcnt != 0){
+			parseErrorL(temp, expcnt, printlinenum);
+	//	}
 	}else if(curToken.word == "{"){
 		parseBlock();
 	}
@@ -1178,7 +1258,7 @@ void parseStmt() {
 		//LVal '=' 'getint''('')'';' // i j
 		//LVal '=' 'getchar''('')'';' // i j
 		if(isLVal){
-			parseErrorH(curToken.word);
+			parseErrorH(curToken.word);		//좌향식 ident가 const값일경우 처리 
 			parseLVal(-1);
 			
 			printcurToken();//	=
@@ -1221,7 +1301,8 @@ void parseForStmt() {
 //		printcurToken();//decl for in int 
 //		nextToken();
 //	}
-	parseErrorH(curToken.word);
+	parseErrorH(curToken.word);	//cosnt값 변환 에러 처리 
+	
 	parseLVal(-1);
 	
 	printcurToken();//	=
@@ -1240,6 +1321,7 @@ int parseExp() {
 	type = parseAddExp(type);
 	
 	printSyntax("Exp");
+	
 	return type;
 }
 
@@ -1256,6 +1338,7 @@ void parseCond() {
 int parseLVal(int type) {
 	printcurToken();//	Ident
 	parseErrorC(curToken.word);
+
 	nextToken();
 	
 	if(curToken.word == "["){
@@ -1278,11 +1361,12 @@ int parsePrimaryExp(int type) {
         printcurToken();  // (
         nextToken();
         
-        parseExp(); 
+        type = parseExp(); 
         
         parseErrorJ();
     } else if(isdigit(curToken.word[0])){//Number
-    	parseNumber();
+    	type = INT;
+		parseNumber();
 	} else if(curToken.Token == "IDENFR"){
 		type = parseLVal(type);
 	} else {//Character
@@ -1292,6 +1376,7 @@ int parsePrimaryExp(int type) {
 	 printSyntax("PrimaryExp");
 	 return type;
 }
+
 
 //Number → IntConst 
 void parseNumber() {
@@ -1320,44 +1405,71 @@ int parseUnaryExp(int type) {
 		
 		type = parseUnaryExp(type);
 	} else if(curToken.Token == "IDENFR" && temp1 == "("){
-		isfuncparam = true;	//함수의 매개변수인가  
+//		isfuncparam = true;    //함수 매개변수 받기 
+		parseErrorC(curToken.word);
+		
 		
 		printcurToken();  // ident
-		parseErrorC(curToken.word);
 		last_nonT = curToken.line_num;
-    	int last_func_line = curToken.line_num; //함수 호출 라인 
-    	string Identname = curToken.word;
-    	
-		for (int i = 0; i < funcInfo_top; i++){	//현재 함수의 매개변수 
-    		if (funcInfo[i].name == curToken.word) {
-            	ErrEtemp.push_back(funcInfo[i]);
-            	ErrEtemp_top++;
-				break;
-       		}
-		}
+		last_func_line = curToken.line_num;
+    	string identname = curToken.word;
+
+    	bool isFound = false;
+        for (int i = 0; i <= funcInfo_top; i++) {  // 함수 정의 목록에서 매칭 검사
+            if (funcInfo[i].name == identname) {
+                funcparse.push_back(funcInfo[i]);
+                isFound = true;
+                break;
+            }
+        }
+
+        if (!isFound) {
+            // 정의되지 않은 함수일 경우
+            printcurToken(); // 'ident'
+			nextToken(); 
+            while (curToken.word != ")" && curToken.word != ";") {  // ')' 또는 ';'까지 건너뜀
+                printcurToken();
+				nextToken();
+                if (curpos >= Tlist_top) break;  // 파일 끝에 도달했으면 탈출
+            }
+            if (curToken.word == ")"){
+				printcurToken();
+				nextToken();  // ';' 처리 
+			}
+            printSyntax("UnaryExp");
+            return type;  // 함수 호출 처리 종료
+        }
 		
-		nextToken();
-    
+		type = funcparse.back().type;
+		
+		printfSymbol[print_top].name = funcparse.back().name + " " 
+		+ to_string(funcparse.back().paramcnt) + " " + to_string(funcparse.back().expectedcnt);	//print only
+		print_top++;
+		
+    	nextToken();
+    	
     	printcurToken();  //(
     	nextToken();
     	
     	if(curToken.word != ")"){
-    		parseFuncRParams();
+    		if(curToken.word != ";"){// 그냥 )parse err 
+    			parseFuncRParams();
+			}
 		}
 		
-		if(!parseErrorJ() && ErrEtemp_top > 0){		//에러j가 우선순위를 가짐 
-			parseErrorD(Identname, ErrEtemp[ErrEtemp_top - 1].paramcurpos , last_func_line);
+		if(!parseErrorJ()){		//에러j가 우선순위를 가짐 
+			if(funcparse.back().expectedcnt != funcparse.back().paramcnt){
+				parseErrorD(last_func_line);
+			}
 		}
 		
-		if(ErrEtemp_top > 0){
-			ErrEtemp.pop_back();
-			ErrEtemp_top--;		//매개변수로 선언된 함수처리 
-		}
-		isfuncparam = false;
+		funcparse.pop_back();
+//		isfuncparam = false;	//함수 매개변수 끄기 
 	} else{
 		type = parsePrimaryExp(type);
 	}
 	printSyntax("UnaryExp");
+	
 	return type;
 }
 
@@ -1370,31 +1482,34 @@ void parseUnaryOp() {
 }
 
 //FuncRParams → Exp { ',' Exp } 
-void parseFuncRParams() {
+int parseFuncRParams() {
+	int paramscnt = 0;
 	
-	//errore in
-	parseExp();  // 첫 번째 매개변수 처리
-    if(isfuncparam){	//errorD처리중 
-    	if(ErrEtemp_top > 0){
-    		ErrEtemp[ErrEtemp_top - 1].paramcurpos++;	
-		}
-	}
+	parseErrorE(paramscnt + 1);	 //1 일때 cnt = 0 
+	int type = parseExp();  // 첫 번째 매개변수 처리
 	
+	paramscnt++;
+	funcparse.back().expectedcnt++;
+	printfSymbol[print_top].name = funcparse.back().name + "end " 
+	+ to_string(funcparse.back().paramcnt) + " " + to_string(funcparse.back().expectedcnt);	//print only
+	print_top++;
+    
     while (curToken.word == ",") {
         printcurToken();  // ,
         nextToken();
         
-        //errore in
-        parseExp(); 
-        
-		if(isfuncparam){	//errorD처리중 
-    		if(ErrEtemp_top > 0){
-    			ErrEtemp[ErrEtemp_top - 1].paramcurpos++;	
-			}
-		}
+        parseErrorE(paramscnt + 1);	    
+        type = parseExp();  
+
+		paramscnt++;
+		funcparse.back().expectedcnt++;
+		printfSymbol[print_top].name = funcparse.back().name + "end " 
+		+ to_string(funcparse.back().paramcnt) + " " + to_string(funcparse.back().expectedcnt);	//print only
+		print_top++;
     }
     
     printSyntax("FuncRParams");
+    return paramscnt;
 }
 
 //MulExp → UnaryExp | MulExp ('*' | '/' | '%') UnaryExp 
@@ -1509,95 +1624,252 @@ void parseErrorA(){
 		parseLOrExp();
 	}
 }
-
-bool parseErrorB(string name, int type, int kind, int curscope){
-	for (int i = ST_top - 1; i >= 0; i--) {
-        if (symbolTable[i].scope == curscope) {
-            if (symbolTable[i].name == name) { 
-                push_err_list('b');
-                return false;
-            }
+ 
+bool parseErrorB(string name, int type, int kind, int isconst, int nowScope){
+	for (int i = ST_top; i >= 0; i--) {
+        if (symbolTable[i].scope == nowScope && symbolTable[i].name == name) {
+            push_err_list('b');
+            return false;
         }
         if(isequalScope){
-        	if (symbolTable[i].scope == curscope) {	
+        	if (symbolTable[i].scope == curScope) {	
         		if (symbolTable[i].name == name) { 
                 	push_err_list('b');
                 	return false;
             	}
 			}
-		}
+		} 
     }
-    add_s_Table(name, type,kind);
+
+   add_s_Table(name, type, kind, isconst);
     
 	return true;
 }
 
+//void parseErrorC(string name) {
+//    bool isFound = false;
+//    for (int i = ST_top; i >= 0; i--) {
+//        if (symbolTable[i].name == name && (symbolTable[i].scope == glb_SS || 
+//		symbolTable[i].scope == funcStartScope || symbolTable[i].scope == 1)) {
+//            isFound = true;
+//            break;
+//    	}
+//    }
+//    if (!isFound) {
+//        push_err_list('c'); // 정의되지 않은 변수 오류 처리
+//    }
+//}
+stack<int> printscope;
+
 void parseErrorC(string name) {
     bool isFound = false;
-    for (int i = 0; i < ST_top; i++) {
-        if (symbolTable[i].name == name) {
+    stack<int> tempScopeStack = scopeStack; // 임시 스택을 사용하여 원래 스택을 변경하지 않음
+
+    while (!tempScopeStack.empty()) {
+        int currentScope = tempScopeStack.top(); // 현재 스코프
+		printscope.push(currentScope);
+        tempScopeStack.pop(); // 스택을 망가뜨리지 않고 상위 스코프로 이동
+
+        // 현재 스코프에서 심볼 찾기
+        SymbolTable* symbol = findSymbol(name, currentScope);
+        if (symbol != nullptr) {
             isFound = true;
             break;
         }
     }
+
+    // 모든 스코프를 탐색했음에도 불구하고 심볼을 찾지 못했으면 에러 추가
     if (!isFound) {
         push_err_list('c'); // 정의되지 않은 변수 오류 처리
     }
 }
 
-void parseErrorD(string name, int cnt, int funcline) {
-    for (int i = 0; i < funcInfo_top; i++){
-    	if (funcInfo[i].name == name) {
-            if(funcInfo[i].paramcnt != cnt){
-            	push_err_list('d', funcline);
-            	return; 
-			}
-        }
-	}
+void parseErrorD(int funcline) {
+    push_err_list('d', funcline);
+    return; 
 }
 
-//void parseErrorE(){//숫자 캐릭터 식별자 
-//	if(!isfuncDef){  // 함수 선언인지 확인
-//		if(ErrEtemp_top - 1 < ErrEtemp.size() && ErrEtemp[ErrEtemp_top - 1].paramcurpos < ErrEtemp[ErrEtemp_top - 1].paramtype.size()) {//배열초과 방지
-//			//변수 값 받기 
-//			string sindex;
-//			int index = 0;
-//			int isEnd = 0;
-//			while(true){
-//				if(curToken.word == "," || curToken.word == ")" || curToken.word == ";"){
-//					isEnd = 1;
-//					break;
-//				}else if(curToken.word == "+" || curToken.word == "-" ||
-//				   curToken.word == "*" || curToken.word == "/" || 
-//				   curToken.word == "%" || curToken.word == "/'" ){
-//				   	//'처리?
-//					    index++;
-//				}else if(curToken.Token == "INTTK" || curToken.Token == "CHARTK" || curToken.Token == "IDENFR"){
-//					if(curToken.Token == "IDENFR"){
-//						for(int i = ST_top - 1; i >= 0 ; i--){
-//							if(curToken.word == symbolTable[i].name){
-//								int identtype = symbolTable[i].type;
-//							}
-//						}
-//				}
-//				
-//				
-//				
-//				if(curpos >= Tlist_top){
-//				break;
-//				}
-//			} 
-//			while(index)
-//			{
-//				preToken();
-//				index--;
-//			}
-//		} else {
-//			cout << "ErrEtemp arr err" << endl;  // 범위 초과 시 오류 처리
-//		}
-//	}
-//	return;
+void findAndSetSymbol(const string& tokenName) {
+    for (int i = ST_top - 1; i >= 0; i--) { // 심볼 테이블을 역순으로 검색
+        if (tokenName == symbolTable[i].name) {
+            // 찾은 심볼의 정보를 SymbolTemp에 저장
+            SymbolTemp = symbolTable[i];
+
+            // 심볼 정보를 printfSymbol 배열에 저장하여 나중에 출력할 수 있도록 합니다.
+            printfSymbol[print_top].name = SymbolTemp.name;
+            printfSymbol[print_top].kind = SymbolTemp.kind;
+            printfSymbol[print_top].type = SymbolTemp.type;
+            print_top++; // print_top을 증가시켜 다음 출력 정보 위치를 업데이트
+
+            break; // 심볼을 찾으면 루프 종료
+        }
+    }
+}
+
+//void parseErrorE(int param_num) {
+//    funcparam& curFunc = funcparse.back();
+//
+//    if (curFunc.paramcnt == 0) { // 매개변수 없을 경우 체크 X
+//        return;
+//    }
+//
+//    // 변수일 때
+//    if (curToken.Token == "IDENFR") {
+//        findAndSetSymbol(curToken.word);
+//        
+//        // 기대값이 배열일 때
+//        if (curFunc.paramkind[param_num - 1] == 3) {
+//            nextToken(); // 배열을 단일로 받는 경우 처리
+//            if (curToken.word == "[") {
+//                nextToken();
+//                if (isdigit(curToken.word[0])) {
+//                    preToken();
+//                    preToken();
+//                    push_err_list('e', last_func_line);
+//                    return; // 배열이 아닌 경우 함수 종료
+//                }
+//                preToken();
+//            }
+//            preToken();
+//
+//            // 매개변수 타입과 심볼 테이블 타입 비교
+//            if (SymbolTemp.type != curFunc.paramtype[param_num - 1] ||
+//                SymbolTemp.kind != curFunc.paramkind[param_num - 1]) {
+//                push_err_list('e', last_func_line);
+//            }
+//        } else if (curFunc.paramkind[param_num - 1] == 0) { // 일반 변수
+//            nextToken(); // 배열을 단일로 받는 경우 처리
+//            if (curToken.word == "[") {
+//                nextToken();
+//                if (isdigit(curToken.word[0])) { // 배열로 전달된 경우
+//                    preToken();
+//                    preToken();
+//                    return; // 일반 변수 기대 시 함수 종료
+//                }
+//                preToken();
+//            }
+//            preToken();
+//
+//            // 일반 변수인데 배열일 때 오류 추가
+//            if (SymbolTemp.kind == 3) {
+//                push_err_list('e', last_func_line);
+//            }
+//        }
+//    } else if (isdigit(curToken.word[0])) { // 숫자이고 배열이 아니면 인트
+//        printfSymbol[print_top].name = curToken.word; // print only
+//        printfSymbol[print_top].kind = 0;
+//        printfSymbol[print_top].type = 0;
+//        print_top++;
+//
+//        // 배열 기대 시 오류 추가
+//        if (curFunc.paramkind[param_num - 1] == 3) {
+//            push_err_list('e', last_func_line);
+//        }
+//    } else if (isalpha(curToken.word[0]) || curToken.word[0] == '\'') { 
+//        printfSymbol[print_top].name = curToken.word; // print only
+//        printfSymbol[print_top].kind = 0;
+//        printfSymbol[print_top].type = 1;
+//        print_top++;
+//
+//        // 배열 기대 시 오류 추가
+//        if (curFunc.paramkind[param_num - 1] == 3) {
+//            push_err_list('e', last_func_line);
+//        }
+//    }
+//
+//    return;
 //}
+
+
+void parseErrorE(int param_num) {
+    funcparam& curFunc = funcparse.back();
+    
+    if (curFunc.paramcnt == 0) { // 매개변수 없을 경우 체크 X
+        return;
+    }
+    
+    int nextTokencnt = 0;
+    bool first = true;
+    
+    while (curToken.word != ")" && curToken.word != "," && curToken.word != ";") {
+        if (first) {
+            first = false;
+        } else {
+            nextToken();
+            nextTokencnt++;
+        }
+        
+        // 변수일 때
+        if (curToken.Token == "IDENFR") {
+            findAndSetSymbol(curToken.word);
+            if (curFunc.paramkind[param_num - 1] == 3) { // 기대값이 배열일 때
+                nextToken(); // 배열을 단일로 받는 경우 처리
+                if (curToken.word == "[") {
+                    nextToken();
+                    if (isdigit(curToken.word[0])) {
+                        preToken();
+                        preToken();
+                        push_err_list('e', last_func_line);
+                        break;
+                    }
+                    preToken();
+                }
+                preToken();
+                
+                if (SymbolTemp.type != curFunc.paramtype[param_num - 1] || 
+                    SymbolTemp.kind != curFunc.paramkind[param_num - 1]) {
+                    push_err_list('e', last_func_line);
+                    break;
+                }
+            } else if (curFunc.paramkind[param_num - 1] == 0) { // 일반 변수
+                bool isfind = false; 
+                nextToken(); // 배열을 단일로 받는 경우 처리
+                if (curToken.word == "[") {
+                    nextToken();
+                    if (isdigit(curToken.word[0])) {
+                        isfind = true;
+                    }
+                    preToken();
+                }
+                preToken();
+                
+                if (!isfind && SymbolTemp.kind == 3) {
+                    push_err_list('e', last_func_line);
+                    break;
+                }
+            }
+        } else if (isdigit(curToken.word[0])) { // 숫자이고 배열이 아니면 인트
+            printfSymbol[print_top].name = curToken.word; // print only
+            printfSymbol[print_top].kind = 0;
+            printfSymbol[print_top].type = 0;
+            print_top++;
+
+            if (curFunc.paramkind[param_num - 1] == 3) { // 배열 기대 시 에러 추가
+                push_err_list('e', last_func_line);
+                break;
+            }
+        } else if (isalpha(curToken.word[0]) || curToken.word[0] == '\'') { 
+            printfSymbol[print_top].name = curToken.word; // print only
+            printfSymbol[print_top].kind = 0;
+            printfSymbol[print_top].type = 1;
+            print_top++;
+
+            if (curFunc.paramkind[param_num - 1] == 3) { // 배열 기대 시 에러 추가
+                push_err_list('e', last_func_line);
+                break;
+            }
+        } 
+    }
+
+    // 반복문 종료 후, nextToken 호출 횟수만큼 preToken 호출
+    while (nextTokencnt > 0) {
+        preToken();
+        nextTokencnt--;
+    }
+
+    return;
+}
+
 
 void parseErrorF(int linenum){
 	if(!isneedreturn){
@@ -1614,25 +1886,31 @@ void parseErrorG(){
 }
 
 void parseErrorH(string name){
-	for (int i = 0; i < ST_top; i++) {
-        if (symbolTable[i].name == name) {
-            if(symbolTable[i].type == 2 || symbolTable[i].type == 3){
-            	push_err_list('h');
+	for (int i = ST_top; i >= 0; i--) {
+		bool find = false;
+		if(symbolTable[i].name == name && symbolTable[i].scope == glb_SS){
+			find = true;
+		}
+        if (symbolTable[i].name == name && (symbolTable[i].scope == curScope || 
+		(symbolTable[i].scope == funcStartScope && find) || symbolTable[i].scope == 1)) {
+            if(symbolTable[i].isconst == 1){
+				push_err_list('h');
 			}
             break;
         }
     }	
 }
 
-void parseErrorI(){
+bool parseErrorI(){
 	if (curToken.word != ";"){
 		push_err_list('i', last_nonT);
-		cout << "sibal" << endl;
+		return true;;
 	}
 	else{
 		printcurToken();
 		nextToken();
 	}
+	return false;
 }
 
 bool parseErrorJ(){
@@ -1677,26 +1955,73 @@ void parseErrorM(){
 }
 
 int main() {
+	scopeStack.push(curScope);
+		
     init();
     Lexical_Analysis();
 //    output_Syntax();
 //    print_Lexical();
     Syntax_Analysis();
     print_symbol_list();
-    cout << "\n\n";
+    cout << "\n\n" << endl;
     print_err_list();
-
-//	함수저장 출력 
-//   cout << "\n\n";
-//		for(int i = 0; i < funcInfo_top; i++){
-//		cout << funcInfo[i].type << " " << funcInfo[i].name << " " <<
+    
+    cout<< "\n\n";
+    while (!printscope.empty()) {
+        cout << printscope.top() << " ";
+        printscope.pop();
+    }
+    
+//    //	함수저장 출력 
+//    cout << "\n\n";
+//	for(int i = 0; i < funcInfo_top; i++){
+//		string temp1;
+//		if(funcInfo[i].type == 0){
+//			temp1 = "Int";
+//		}else if(funcInfo[i].type == 1){
+//			temp1 = "Char";
+//		}else {
+//			temp1 = "Void";
+//		}
+//		cout << temp1 << " " << funcInfo[i].name << " " <<
 //		funcInfo[i].paramcnt << " ";
-//		for (const string& type : funcInfo[i].paramtype) {
-//        cout << type << endl;
+//		for (int j = 0; j < funcInfo[i].paramcnt; ++j) {
+//    	int type1 = funcInfo[i].paramtype[j];
+//    	int type2 = funcInfo[i].paramkind[j];
+//		string temp2;
+//		if(type1 == 0){
+//			temp2 = "Int";
+//		}else if(type1 == 1){
+//			temp2 = "Char";
+//		}else if(type1 == 2){
+//			temp2 = "Void";
+//		}
+//		if(type2 == 3){
+//			temp2 += "Arr";
+//		}
+//        cout << temp2 << endl;
 //    	}
 //    	cout << "\n";
 //	} 
-    
+//	
+//	for(int i = 0; i < print_top; i++){
+//		string temp;
+//		if(printfSymbol[i].type == 0){
+//			temp = "Int";
+//		}else if(printfSymbol[i].type == 1){
+//			temp = "Char";
+//		}else if(printfSymbol[i].type == 2){
+//			temp = "Void";
+//		}
+//		if(printfSymbol[i].kind == 3){
+//			temp += "Arr";
+//		}else if(printfSymbol[i].kind == 1){
+//			temp += "Func";
+//		}
+//		cout << printfSymbol[i].name << " " 
+//		<< temp << endl;
+//	}
+	
     inputFile.close();
     outputFile.close();
     outputFile2.close();
